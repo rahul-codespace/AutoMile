@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34024.191
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoMile.Web", "AutoMile.Web\AutoMile.Web.csproj", "{128CA520-C164-487C-BDA2-D265FC89B2A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoMile.Service", "AutoMile.Service\AutoMile.Service.csproj", "{91F57B75-D391-4C92-B366-110951D26CB9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{128CA520-C164-487C-BDA2-D265FC89B2A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{128CA520-C164-487C-BDA2-D265FC89B2A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{128CA520-C164-487C-BDA2-D265FC89B2A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{128CA520-C164-487C-BDA2-D265FC89B2A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91F57B75-D391-4C92-B366-110951D26CB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91F57B75-D391-4C92-B366-110951D26CB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91F57B75-D391-4C92-B366-110951D26CB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91F57B75-D391-4C92-B366-110951D26CB9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C6066189-1208-474F-BABC-021B819E71D5}
+	EndGlobalSection
+EndGlobal
