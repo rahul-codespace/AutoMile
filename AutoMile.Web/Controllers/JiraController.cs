@@ -14,7 +14,7 @@ namespace AutoMile.Web.Controllers
         private readonly IOpenAIAppService _openAIAppService;
         
 
-        public JiraController(JiraAppService jiraService, IOpenAIAppService openAIAppService)
+        public JiraController(IJiraAppService jiraService, IOpenAIAppService openAIAppService)
         {
             _jiraService = jiraService;
             _openAIAppService = openAIAppService;
