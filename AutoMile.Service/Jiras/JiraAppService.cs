@@ -1,18 +1,23 @@
 ﻿using Atlassian.Jira;
+using AutoMile.Domain.GenerativeAI;
+using AutoMile.Domain.Jiras;
 using Microsoft.Extensions.Configuration;
+using System;
 
 namespace AutoMile.Service.Jiras
 {
-    public class JiraAppService
+    public class JiraAppService : IJiraAppService
     {
         private readonly IConfiguration _configuration;
+        private readonly IOpenAIAppService _openAIAppService;
 
-        public JiraAppService(IConfiguration configuration)
+        public JiraAppService(IConfiguration configuration, IOpenAIAppService openAIAppService)
         {
             _configuration = configuration;
+            _openAIAppService = openAIAppService;
         }
 
-        public async Task<List<string>> CreateJiraIssuesAsync(string projectKey, List<string> userStories)
+        public async Task<List<string>> CreateJiraIssuesAsync(string projectKey, string fixVersionName, List<string> userStories)
         {
             var jira = CreateJiraClient();
             var issueKeys = new List<string>();
@@ -24,8 +29,10 @@ namespace AutoMile.Service.Jiras
                     var newIssue = new Issue(jira, projectKey)
                     {
                         Type = "Story",
-                        Summary = userStoryContent
+                        Summary = userStoryContent,
+                        Description = await _openAIAppService.GenerateAcceptanceCriteriaFromUserStory(userStoryContent),
                     };
+                    newIssue.FixVersions.Add(fixVersionName); // Update fix version
 
                     await newIssue.SaveChangesAsync(); // Save the new issue
 
@@ -63,7 +70,7 @@ namespace AutoMile.Service.Jiras
             }
         }
 
-        public async Task<string> GetProjectVersionDisc(string projectIdOrKey)
+        public async Task<string> GetProjectVersionDisc(string projectIdOrKey, string fixVersionName)
         {
             try
             {
@@ -73,7 +80,7 @@ namespace AutoMile.Service.Jiras
                 if (project != null)
                 {
                     var versions = await project.GetVersionsAsync();
-                    var version = versions.FirstOrDefault();
+                    var version = versions.FirstOrDefault(x=>x.Name == fixVersionName);
                     if (version != null)
                     {
                         var versionDescription = version.Description;

@@ -1,3 +1,4 @@
+using AutoMile.Domain.GenerativeAI;
 using AutoMile.Service.GenerativeAI;
 using AutoMile.Service.Jiras;
 
@@ -9,7 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<JiraAppService>();
-builder.Services.AddScoped<OpenAIAppService>();
+builder.Services.AddScoped<IOpenAIAppService, OpenAIAppService>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
