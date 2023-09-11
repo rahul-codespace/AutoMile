@@ -26,7 +26,7 @@ namespace AutoMile.Service.GenerativeAI
                     temperature = 0.2,
                     messages = new[]
                     {
-                        new { role = "system", content = "You are a JIRA AI chatbot. Generate a user story for a software project based on the following information, user story contains the two data summary and discription:" },
+                        new { role = "system", content = "You are a JIRA AI chatbot. Generate a user story for a software project based on the following information:" },
                         new { role = "user", content },
                     }
                 };

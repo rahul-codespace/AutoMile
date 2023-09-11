@@ -33,10 +33,10 @@ namespace AutoMile.Web.Controllers
             return returnDTO;
         }
 
-        [HttpGet("GetResponseFromGPT")]
-        public async Task<List<string>> GetResponseFromGPT([FromBody] string content)
+        [HttpPost("GetResponseFromGPT")]
+        public async Task<List<string>> GetResponseFromGPT(FixVersionDiscDto fixVersionDiscDto)
         {
-            var userStories = await _openAIAppService.GetUserStoriesFromGPT(content);
+            var userStories = await _openAIAppService.GetUserStoriesFromGPT(fixVersionDiscDto.Discription);
             return userStories;
         }
 
