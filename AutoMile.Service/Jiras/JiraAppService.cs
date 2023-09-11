@@ -1,55 +1,65 @@
-﻿using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using System.Text;
+﻿using Atlassian.Jira;
+using Microsoft.Extensions.Configuration;
 
 namespace AutoMile.Service.Jiras
 {
     public class JiraAppService
     {
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
-
-        public JiraAppService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public JiraAppService(IConfiguration configuration)
         {
-            _httpClientFactory = httpClientFactory;
             _configuration = configuration;
         }
 
-        public async Task<List<string>> CreateJiraIssuesAsync(List<string> userStories)
+        public async Task<List<string>> CreateJiraIssuesAsync(string projectKey, List<string> userStories)
+        {
+            var jira = CreateJiraClient();
+            var issueKeys = new List<string>();
+
+            foreach (var userStoryContent in userStories)
+            {
+                try
+                {
+                    var newIssue = new Issue(jira, projectKey)
+                    {
+                        Type = "Story",
+                        Summary = userStoryContent
+                    };
+
+                    await newIssue.SaveChangesAsync(); // Save the new issue
+
+                    issueKeys.Add(newIssue.Key.ToString()); // Store the created issue key
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error creating issue: {ex.Message}");
+                }
+            }
+
+            return issueKeys;
+        }
+        public async Task<string> CreateJiraIssueAsync(string projectKey, string userStoryContent)
         {
             try
             {
-                var httpClient = CreateJiraHttpClient();
-                var issueCreationTasks = userStories.Select(async userStoryContent =>
+                var jira = CreateJiraClient();
+
+                var newIssue = new Issue(jira, projectKey)
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Post, "/rest/api/2/issue");// Create a new request for each user story
+                    Type = "Story",
+                    Summary = userStoryContent,
+                };
 
-                    var issueRequest = CreateIssueRequestObject(userStoryContent);
+                await newIssue.SaveChangesAsync(); // Save the new issue
 
-                    var jsonContent = JsonConvert.SerializeObject(issueRequest);
-                    request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-                    var response = await httpClient.SendAsync(request);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var result = await response.Content.ReadAsStringAsync();
-                        return result;
-                    }
-                    else
-                    {
-                        return string.Empty;
-                    }
-                });
-
-                var createdIssues = await Task.WhenAll(issueCreationTasks);
-                return createdIssues.ToList();
+                return newIssue.Key.ToString(); // Return the created issue key as a string
             }
             catch (Exception ex)
             {
-                // Handle exceptions gracefully, log them, or return an error message
-                throw ex;
+                // Handle exceptions for issue creation here
+                Console.WriteLine($"Error creating issue: {ex.Message}");
+                throw; // You may want to decide how to handle or propagate exceptions
             }
         }
 
@@ -57,64 +67,51 @@ namespace AutoMile.Service.Jiras
         {
             try
             {
-                var httpClient = CreateJiraHttpClient();
-                var request = new HttpRequestMessage(HttpMethod.Get, $"/rest/api/3/project/{projectIdOrKey}/version");
+                var jira = CreateJiraClient();
 
-                var response = await httpClient.SendAsync(request);
-
-                if (response.IsSuccessStatusCode)
+                var project = await jira.Projects.GetProjectAsync(projectIdOrKey);
+                if (project != null)
                 {
-                    var jsonContent = await response.Content.ReadAsStringAsync();
-                    dynamic versionResponse = JsonConvert.DeserializeObject(jsonContent);
-
-                    // Extract and return the description field
-                    var description = versionResponse.values[0]?.description;
-
-                    if (description != null)
+                    var versions = await project.GetVersionsAsync();
+                    var version = versions.FirstOrDefault();
+                    if (version != null)
                     {
-                        return description.ToString();
+                        var versionDescription = version.Description;
+                        return versionDescription;
                     }
                 }
 
-                // Handle non-successful responses here
-                // You can log the response or throw a custom exception
                 return string.Empty;
             }
             catch (Exception ex)
             {
-                // Handle exceptions gracefully, log them, or return an error message
-                throw ex;
+                Console.WriteLine($"Error fetching project version description: {ex.Message}");
+                throw;
             }
         }
 
-
-
-        private HttpClient CreateJiraHttpClient()
+        public async Task<List<Issue>> GetJiraUserStoriesAsync(string projectKey)
         {
-            var httpClient = _httpClientFactory.CreateClient();
-            var jiraApiUrl = _configuration["JiraConfig:JiraApiUrl"];
-            var jiraAuthorization = Convert.ToBase64String(Encoding.UTF8.GetBytes(_configuration["JiraConfig:JiraAuthorization"]));
+            try
+            {
+                var jira = CreateJiraClient();
 
-            httpClient.BaseAddress = new Uri(jiraApiUrl);
-            httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {jiraAuthorization}");
+                var jql = $"project = {projectKey} AND issuetype = Story";
+                var issues = await jira.Issues.GetIssuesFromJqlAsync(jql, 100);
 
-            return httpClient;
+                return issues.ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching issues: {ex.Message}");
+                throw;
+            }
         }
 
-        private object CreateIssueRequestObject(string userStoryContent)
+        // Function to create the Jira client instance
+        private Jira CreateJiraClient()
         {
-            return new
-            {
-                fields = new
-                {
-                    project = new { key = "EX" },
-                    summary = userStoryContent,
-                    description = "Creating an issue using project keys and issue type names using the REST API",
-                    issuetype = new { name = "Story" },
-                    fixVersions = new[] { new { name = "1.0" } }
-                }
-            };
+            return Jira.CreateRestClient(_configuration["JiraConfig:JiraApiUrl"], _configuration["JiraConfig:JiraUserName"], _configuration["JiraConfig:JiraApiToken"]);
         }
     }
 }
