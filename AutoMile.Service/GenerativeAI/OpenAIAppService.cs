@@ -1,54 +1,84 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using AutoMile.Domain.GenerativeAI;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text;
 
 namespace AutoMile.Service.GenerativeAI
 {
-    public class OpenAIAppService
+    public class OpenAIAppService : IOpenAIAppService
     {
         private const string OpenAIEndpoint = "https://api.openai.com/v1/chat/completions";
-        private string OpenAIApiKey;
         private readonly IConfiguration _configuration;
+        private readonly HttpClient _httpClient;
+
         public OpenAIAppService(IConfiguration configuration)
         {
             _configuration = configuration;
+            _httpClient = new HttpClient();
+            InitializeHttpClient();
         }
-        public async Task<List<string>> GetUserStoriesFromGPT(string content)
+
+        private void InitializeHttpClient()
         {
-            using (HttpClient client = new HttpClient())
+            var apiKey = _configuration["ChatGPT:Key"];
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        }
+
+        public async Task<List<string>> CreateUserStoriesFromGPT(string content)
+        {
+            var requestContent = CreateRequestContent(content, "You are an AI chatbot assisting with project management. Please generate a user story based on the following information:");
+            var assistantResponse = await GetAssistantResponse(requestContent);
+
+            return ParseUserStories(assistantResponse);
+        }
+
+        public async Task<string> GenerateAcceptanceCriteriaFromUserStory(string userStory)
+        {
+            var requestContent = CreateRequestContent(userStory, "You are an AI chatbot assisting with project management. Please generate acceptance criteria based on the following user story:");
+            var assistantResponse = await GetAssistantResponse(requestContent);
+
+            return assistantResponse;
+        }
+
+        private async Task<string> GetAssistantResponse(object requestContent)
+        {
+            var jsonContent = new StringContent(JsonConvert.SerializeObject(requestContent), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(OpenAIEndpoint, jsonContent);
+            response.EnsureSuccessStatusCode();
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            var jsonObject = JObject.Parse(responseBody);
+            var assistantResponse = jsonObject["choices"][0]["message"]["content"].ToString();
+
+            return assistantResponse;
+        }
+
+        private object CreateRequestContent(string content, string systemMessage)
+        {
+            return new
             {
-                OpenAIApiKey = _configuration["ChatGPT:Key"]!;
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {OpenAIApiKey}");
-
-                var requestContent = new
+                model = "gpt-3.5-turbo",
+                temperature = 0.2,
+                messages = new[]
                 {
-                    model = "gpt-3.5-turbo",
-                    temperature = 0.2,
-                    messages = new[]
-                    {
-                        new { role = "system", content = "You are a JIRA AI chatbot. Generate a user story for a software project based on the following information, user story contains the two data summary and discription:" },
-                        new { role = "user", content },
-                    }
-                };
-
-                var jsonContent = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(requestContent), Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(OpenAIEndpoint, jsonContent);
-                response.EnsureSuccessStatusCode();
-                var responseBody = await response.Content.ReadAsStringAsync();
-
-                var jsonObject = JObject.Parse(responseBody);
-                var userStories = new List<string>();
-
-                var assistantResponse = jsonObject["choices"][0]["message"]["content"].ToString();
-                var userStoryArray = assistantResponse.Split("\n\nAs a user, ");
-
-                foreach (var userStoryContent in userStoryArray)
-                {
-                    userStories.Add("As a user, " + userStoryContent.Trim());
+                    new { role = "system", content = systemMessage },
+                    new { role = "user", content = content },
                 }
+            };
+        }
 
-                return userStories;
+        private List<string> ParseUserStories(string assistantResponse)
+        {
+            var userStories = new List<string>();
+            var userStoryArray = assistantResponse.Split("\n\nAs a user, ");
+
+            foreach (var userStoryContent in userStoryArray)
+            {
+                userStories.Add("As a user, " + userStoryContent.Trim());
             }
+
+            return userStories;
         }
     }
 }
